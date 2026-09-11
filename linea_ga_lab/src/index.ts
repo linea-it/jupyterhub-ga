@@ -27,23 +27,30 @@ function loadGtag(): void {
     return;
   }
 
+  // Padrão oficial do Google: push do objeto Arguments (não de um Array aninhado).
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function gtag() {
+    // eslint-disable-next-line prefer-rest-params
+    window.dataLayer.push(arguments);
+  };
+
+  // Sem consent explícito, o gtag pode enfileirar eventos e não disparar /g/collect.
+  window.gtag('consent', 'default', {
+    analytics_storage: 'granted',
+    ad_storage: 'denied'
+  });
+
   const script = document.createElement('script');
   script.id = SCRIPT_ID;
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${MEASUREMENT_ID}`;
   document.head.appendChild(script);
 
-  window.dataLayer = window.dataLayer || [];
-  function gtag(...args: unknown[]): void {
-    window.dataLayer.push(args);
-  }
-  window.gtag = gtag;
-
-  gtag('js', new Date());
-  gtag('config', MEASUREMENT_ID, { send_page_view: false });
+  window.gtag('js', new Date());
+  window.gtag('config', MEASUREMENT_ID, { send_page_view: false });
 
   const path = sanitizedPath();
-  gtag('event', 'page_view', {
+  window.gtag('event', 'page_view', {
     page_location: window.location.origin + path,
     page_path: path,
     page_title: 'JupyterLab'
