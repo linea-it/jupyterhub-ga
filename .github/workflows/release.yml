@@ -1,0 +1,138 @@
+# Build wheel: em release (anexa ao Release), em push para main ou manual (artefato).
+name: Build wheel
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to build'
+        required: false
+        default: 'main'
+
+jobs:
+  build-wheel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: linea_ga_lab/package.json
+
+      - name: Install npm dependencies (lab extension)
+        run: |
+          cd linea_ga_lab
+          npm ci 2>/dev/null || npm install
+          cd ..
+
+      - name: Install Python build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build hatchling hatch-jupyter-builder jupyterlab
+
+      - name: Build lab extension (gera linea_ga_lab/labextension)
+        run: |
+          cd linea_ga_lab
+          npm run build:lib
+          jupyter labextension build .
+          cd ..
+
+      - name: Garantir que o frontend foi gerado
+        run: |
+          LAB="linea_ga_lab/labextension"
+          if [ ! -f "$LAB/package.json" ]; then
+            echo "::error::$LAB/package.json não existe; lab extension não foi buildada."
+            exit 1
+          fi
+          if [ ! -d "$LAB/static" ] || [ -z "$(find "$LAB/static" -type f 2>/dev/null)" ]; then
+            echo "::error::$LAB/static/ vazio ou ausente; frontend não foi compilado."
+            exit 1
+          fi
+          echo "Frontend gerado: $LAB/package.json e $LAB/static/*"
+
+      - name: Verificar shared-data no pyproject (share/jupyter)
+        run: |
+          if ! grep -q 'share/jupyter/labextensions/linea-ga' pyproject.toml; then
+            echo "::error::pyproject.toml deve mapear labextension para share/jupyter/.../linea-ga"
+            grep -A5 'shared-data' pyproject.toml || true
+            exit 1
+          fi
+          echo "OK: shared-data usa share/jupyter/..."
+
+      - name: Build wheel (frontend)
+        run: python -m build --wheel --outdir dist/ --no-isolation
+
+      - name: Validar paths e gtag no wheel
+        run: |
+          python - <<'PY'
+          import zipfile, glob, sys
+          wheels = sorted(glob.glob('dist/*.whl'))
+          if not wheels:
+              print("::error::Nenhum .whl em dist/")
+              sys.exit(1)
+          w = wheels[-1]
+          z = zipfile.ZipFile(w)
+          names = z.namelist()
+          lab_paths = [n for n in names if "labextensions/linea-ga" in n]
+          ok_share = any("share" in n and "jupyter/labextensions/linea-ga" in n for n in names)
+          bad_prefix = any("share" not in n for n in lab_paths)
+          print("Wheel:", w)
+          print("share + labextensions/linea-ga =>", ok_share)
+          if not ok_share or bad_prefix:
+              print("Paths labextension (amostra):", lab_paths[:5])
+              sys.exit(1)
+          static_js = [n for n in names if "labextensions/linea-ga/static/" in n and n.endswith(".js")]
+          combined = b"".join(z.read(n) for n in static_js).decode("utf-8", errors="ignore")
+          for k in ["G-MGTSETENCM", "googletagmanager.com/gtag/js", "send_page_view", "/user/{user}"]:
+              ok = k in combined
+              print("marker", k, "=>", ok)
+              if not ok:
+                  sys.exit(1)
+          print("OK: paths e gtag no wheel válidos.")
+          PY
+
+      - name: Validar instalação (venv)
+        run: |
+          python -m venv .venv-test
+          . .venv-test/bin/activate
+          pip install --quiet dist/*.whl jupyterlab
+          python - <<'PY'
+          import sys, os
+          expected = f"{sys.prefix}/share/jupyter/labextensions/linea-ga"
+          if not os.path.isdir(expected):
+              print("::error::Labextension não está em", expected)
+              sys.exit(1)
+          print("OK:", expected)
+          PY
+          jupyter labextension list 2>&1 | grep -q linea-ga || (echo "::error::linea-ga não em labextension list" && exit 1)
+          echo "OK: instalação e labextension list válidos."
+
+      - name: Upload .whl to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload .whl as artifact
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ github.sha }}
+          path: dist/*.whl

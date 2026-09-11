@@ -1,0 +1,41 @@
+---
+description: Convenções do jupyterhub-ga (extensão GA oculta no JupyterLab)
+alwaysApply: true
+---
+
+# jupyterhub-ga
+
+Repo: https://github.com/linea-it/jupyterhub-ga  
+Pacote: `linea-ga` / labextension `linea-ga`  
+Measurement ID: `G-MGTSETENCM`
+
+## Propósito
+
+- Extensão JupyterLab **oculta** que carrega gtag **após o login**, no Lab (`/user/<username>/lab`).
+- Não cobre EDS (`www.linea.org.br/static/eds/`) nem páginas do Hub (`/hub/...`).
+- Não misturar com `jupyterhub-templates-ext` (menu Tutorials).
+
+## Regras de UI (obrigatórias)
+
+- Sem `commands.addCommand`, menus, widgets, status bar, palette ou schema de Settings.
+- `autoStart: true` apenas; plugin id `linea-ga:plugin`.
+- Não adicionar `schemaDir` em `package.json` sem necessidade explícita.
+
+## Privacidade
+
+- Sempre `send_page_view: false` no `gtag('config', ...)`.
+- Sanitizar path: `pathname.replace(/^\/user\/[^/]+/, '/user/{user}')`.
+- Não enviar username, query string, tokens ou PII em eventos.
+- Não logar dados de usuário no console em produção.
+
+## Build / publish
+
+- Frontend em `linea_ga_lab/`; wheel via hatch + `shared-data` → `share/jupyter/labextensions/linea-ga/`.
+- Sem extensão de servidor / sem `jpserver_extensions`.
+- Releases em GitHub anexam o `.whl` (workflow `.github/workflows/release.yml`).
+- Ao mudar versão: sincronizar `pyproject.toml` e `linea_ga_lab/package.json`.
+
+## Escopo de mudanças
+
+- Alterações cirúrgicas; não “melhorar” arquivos não pedidos.
+- Não comitar `node_modules/`, `labextension/`, `lib/` ou `dist/`.

@@ -1,0 +1,50 @@
+{
+  "name": "linea-ga",
+  "version": "0.1.0",
+  "description": "Hidden Google Analytics (gtag) loader for JupyterLab (LIneA).",
+  "keywords": [
+    "jupyter",
+    "jupyterlab",
+    "jupyterlab-extension",
+    "analytics",
+    "linea"
+  ],
+  "homepage": "https://github.com/linea-it/jupyterhub-ga",
+  "bugs": {
+    "url": "https://github.com/linea-it/jupyterhub-ga/issues"
+  },
+  "license": "BSD-3-Clause",
+  "author": {
+    "name": "LIneA IT",
+    "email": "helpdesk@linea.org.br"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/linea-it/jupyterhub-ga.git"
+  },
+  "files": [
+    "lib/**/*.{d.ts,js}",
+    "style/**/*.{css,js}"
+  ],
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "style": "style/index.css",
+  "scripts": {
+    "build": "npm run build:lib && npm run build:labextension",
+    "build:lib": "tsc",
+    "build:labextension": "jupyter labextension build .",
+    "clean": "rimraf lib tsconfig.tsbuildinfo labextension"
+  },
+  "dependencies": {
+    "@jupyterlab/application": "^4.0.0"
+  },
+  "devDependencies": {
+    "@jupyterlab/builder": "^4.0.0",
+    "typescript": "~5.0.0",
+    "rimraf": "^5.0.0"
+  },
+  "jupyterlab": {
+    "extension": true,
+    "outputDir": "./labextension"
+  }
+}

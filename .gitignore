@@ -1,0 +1,21 @@
+# Ambiente Python
+.venv/
+.venv-test/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# Lab extension build
+linea_ga_lab/labextension/
+linea_ga_lab/lib/
+linea_ga_lab/node_modules/
+linea_ga_lab/tsconfig.tsbuildinfo
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

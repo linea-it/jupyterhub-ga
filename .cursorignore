@@ -1,0 +1,23 @@
+# Artefatos e deps — não indexar no Cursor
+# (regras de produto/código estão em .cursor/rules/)
+
+# Python
+.venv/
+.venv-test/
+venv/
+**/__pycache__/
+**/*.pyc
+**/*.egg-info/
+dist/
+build/
+
+# Frontend build / deps
+linea_ga_lab/node_modules/
+linea_ga_lab/labextension/
+linea_ga_lab/lib/
+**/package-lock.json
+
+# Misc
+.git/
+.DS_Store
+*.whl
