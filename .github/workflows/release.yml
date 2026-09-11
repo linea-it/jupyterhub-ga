@@ -98,7 +98,7 @@ jobs:
               sys.exit(1)
           static_js = [n for n in names if "labextensions/linea-ga/static/" in n and n.endswith(".js")]
           combined = b"".join(z.read(n) for n in static_js).decode("utf-8", errors="ignore")
-          for k in ["G-MGTSETENCM", "googletagmanager.com/gtag/js", "send_page_view", "/user/{user}"]:
+          for k in ["G-MGTSETENCM", "googletagmanager.com/gtag/js", "send_page_view", "/user/{user}/lab", "linea_jh_image", "consent"]:
               ok = k in combined
               print("marker", k, "=>", ok)
               if not ok:
